@@ -1,0 +1,3 @@
+D:/College/term6/computer graphics/Course Project/Solar-System-Simulation/cmake-build-debug/CMakeFiles/Solar_System_Simulation.dir
+D:/College/term6/computer graphics/Course Project/Solar-System-Simulation/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/College/term6/computer graphics/Course Project/Solar-System-Simulation/cmake-build-debug/CMakeFiles/rebuild_cache.dir
