@@ -47,7 +47,11 @@ static float xVal = 0, zVal = 100; // Co-ordinates of the spacecraft.
 static int isCollision = 0; // Is there collision between the spacecraft and an asteroid?
 static unsigned int spacecraft; // Display lists base index.
 static int frameCount = 0; // Number of frames
-
+static float latAngle = 0.0; // Latitudinal angle.
+static float longAngle = 0.0; // Longitudinal angle.
+static float Xangle = 0.0, Yangle = 0.0, Zangle = 0.0; // Angles to rotate scene.
+static int isAnimate = 0; // Animated?
+static int animationPeriod = 100; // Time interval between frames.
 float planetSize[NUMBER_OF_PLANETS]={
                  5*EARTH_RADIUS,   // Sun
                  0.5f*EARTH_RADIUS,   // Mercury
@@ -61,15 +65,15 @@ float planetSize[NUMBER_OF_PLANETS]={
                  };
 
 float orbitalPeriods[NUMBER_OF_PLANETS] = {
-        0,                  //Sun
-        365.0f / 88.0f,     // Mercury
-        365.0f / 225.0f,    // Venus
-        365.0f / 365.0f,    // Earth
-        365.0f / 687.0f,    // Mars
-        365.0f / 4333.0f,   // Jupiter
-        365.0f / 10759.0f,  // Saturn
-        365.0f / 30687.0f,  // Uranus
-        365.0f / 60190.0f   // Neptune
+        0.0f,              // Sun
+        4.14773f,            // Mercury
+        1.62222f,          // Venus
+        1.0f,              // Earth
+        0.53258f,          // Mars
+        0.0844152f,      // Jupiter
+        0.0339314f,      // Saturn
+        0.0119189f,      // Uranus
+        0.00606553f      // Neptune
 };
 
 //zPositions assume AU = 40unit in opengl
@@ -155,6 +159,8 @@ public:
     float getCenterX() { return centerX; }
     float getCenterY() { return centerY; }
     float getCenterZ() { return centerZ; }
+    float getAngleY(){ return angleY; }
+    float setAngleY(float angleY){ this->angleY=angleY; }
     Position getPosition() {return currentPosition;}
     void setPosition(Position position) {
         this->currentPosition.x=position.x;
@@ -168,6 +174,7 @@ private:
     Position currentPosition;
     PlanetID planetId;
     float centerX, centerY, centerZ, radius;
+    float angleY;
     Color color;
 };
 
@@ -177,6 +184,7 @@ Asteroid::Asteroid()
     centerX = 0.0;
     centerY = 0.0;
     centerZ = 0.0;
+    angleY=0.0;
     currentPosition.x=centerX;
     currentPosition.y=centerY;
     currentPosition.z=centerZ;
@@ -192,6 +200,7 @@ Asteroid::Asteroid(float x, float y, float z, float r, float colorR,
     centerX = x;
     centerY = y;
     centerZ = z;
+    angleY=0.0;
     currentPosition.x=x;
     currentPosition.y=y;
     currentPosition.z=z;
@@ -202,13 +211,26 @@ Asteroid::Asteroid(float x, float y, float z, float r, float colorR,
 // Function to draw asteroid.
 void Asteroid::draw()
 {
+    //TODO : distinguish between sun and planet and draw orbit for saturn
+    //TODO : handle lights
+    //TODO : handle rotation
     if (radius > 0.0) // If asteroid exists.
     {
+
+
+
         glPushMatrix();
+        glRotatef(angleY,0,1.0,0);
         glTranslatef(centerX, centerY, centerZ);
         glColor3f(color.r,color.g,color.b);
+        glRotatef(latAngle,1,0,0);
+        glRotatef(longAngle,0,1.0,0);
         glutSolidSphere(radius, (int)radius * 6, (int)radius * 6);
         glPopMatrix();
+//        setPosition({centerX * (float) cos(angleY * M_PI / 180),
+//                     centerY,
+//                     -1 * centerZ * (float) sin(angleY * M_PI / 180)});
+
     }
 }
 
@@ -284,7 +306,7 @@ void drawScene(void)
     int i;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //bottom right
+    //begin (Solar system) viewport
     glViewport(3*width/4 , 0 , width / 4, height/4);
     glLoadIdentity();
 
@@ -309,9 +331,9 @@ void drawScene(void)
     glRotatef(angle, 0.0, 1.0, 0.0);
     glCallList(spacecraft);
     glPopMatrix();
-    // End left viewport.
+    // End (Solar system) viewport
 
-    // Begin left
+    // Begin (Space-craft view) viewport
 
     glViewport(0, 0, width , height);//demo
     glLoadIdentity();
@@ -345,7 +367,7 @@ void drawScene(void)
 
     for (i = 0; i<NUMBER_OF_PLANETS; i++)
         arrayAsteroids[i].draw();
-    // End right viewport.
+    // End (Space-craft view) viewport.
 
     glutSwapBuffers();
 }
@@ -363,17 +385,77 @@ void resize(int w, int h)
     width = w;
     height = h;
 }
+// Timer function.
+void animate(int value)
+{
+    if(!isAnimate)
+        return;
+    //change angle for each asteriod respectively
+    for(int i=0;i<NUMBER_OF_PLANETS;i++) {
+        float tempAngle = arrayAsteroids[i].getAngleY() + orbitalPeriods[i];
+        if (tempAngle > 360.0) tempAngle -= 360.0;
+            arrayAsteroids[i].setAngleY(tempAngle);
+    }
 
+        latAngle += 5.0;
+    if (latAngle > 360.0) latAngle -= 360.0;
+        longAngle += 1.0;
+        if (longAngle > 360.0) longAngle -= 360.0;
+
+        glutPostRedisplay();
+        glutTimerFunc(animationPeriod, animate, 1);
+
+}
 // Keyboard input processing routine.
 void keyInput(unsigned char key, int x, int y)
 {
     switch (key)
     {
+        case ' ':
+            if (isAnimate) isAnimate = 0;
+            else
+            {
+                isAnimate = 1;
+                animate(1);
+            }
+        break;
+        case 'x':
+            Xangle += 5.0;
+            if (Xangle > 360.0) Xangle -= 360.0;
+            glutPostRedisplay();
+            break;
+        case 'X':
+            Xangle -= 5.0;
+            if (Xangle < 0.0) Xangle += 360.0;
+            glutPostRedisplay();
+            break;
+        case 'y':
+            Yangle += 5.0;
+            if (Yangle > 360.0) Yangle -= 360.0;
+            glutPostRedisplay();
+            break;
+        case 'Y':
+            Yangle -= 5.0;
+            if (Yangle < 0.0) Yangle += 360.0;
+            glutPostRedisplay();
+            break;
+        case 'z':
+            Zangle += 5.0;
+            if (Zangle > 360.0) Zangle -= 360.0;
+            glutPostRedisplay();
+            break;
+        case 'Z':
+            Zangle -= 5.0;
+            if (Zangle < 0.0) Zangle += 360.0;
+            glutPostRedisplay();
+            break;
+
         case 27:
             exit(0);
             break;
         default:
             break;
+
     }
 }
 
