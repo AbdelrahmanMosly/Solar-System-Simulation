@@ -12,6 +12,7 @@
 #define FILL_PROBABILITY 100 // Percentage probability that a particular row-column slot will be
 #define NUMBER_OF_PLANETS 9  //including sun
 #define EARTH_RADIUS 5
+#define AU_DISTANCE 20
 #define EARTH_SPEED 1
 
 // filled with an asteroid. It should be an integer between 0 and 100.
@@ -42,21 +43,21 @@ PlanetID planetIDs[] = {
 static uintptr_t font = (uintptr_t)GLUT_BITMAP_8_BY_13; // Font selection
 static int width, height; // Size of the OpenGL window.
 static float angle = 0.0; // Angle of the spacecraft.
-static float xVal = 0, zVal = 1000; // Co-ordinates of the spacecraft.
+static float xVal = 0, zVal = 100; // Co-ordinates of the spacecraft.
 static int isCollision = 0; // Is there collision between the spacecraft and an asteroid?
 static unsigned int spacecraft; // Display lists base index.
 static int frameCount = 0; // Number of frames
 
 float planetSize[NUMBER_OF_PLANETS]={
-                EARTH_RADIUS,   // Sun
-                EARTH_RADIUS,   // Mercury
-                EARTH_RADIUS,   // Venus
-                EARTH_RADIUS,   // Earth
-                EARTH_RADIUS,   // Mars
-                EARTH_RADIUS,   // Jupiter
-                EARTH_RADIUS,   // Saturn
-                EARTH_RADIUS,   // Uranus
-                EARTH_RADIUS,   // Neptune
+                 5*EARTH_RADIUS,   // Sun
+                 0.5f*EARTH_RADIUS,   // Mercury
+                 0.9f*EARTH_RADIUS,   // Venus
+                 EARTH_RADIUS,   // Earth
+                 0.5f*EARTH_RADIUS,   // Mars
+                 4*EARTH_RADIUS,   // Jupiter
+                 3*EARTH_RADIUS,   // Saturn
+                 2*EARTH_RADIUS,   // Uranus
+                 2*EARTH_RADIUS,   // Neptune
                  };
 
 float orbitalPeriods[NUMBER_OF_PLANETS] = {
@@ -71,17 +72,17 @@ float orbitalPeriods[NUMBER_OF_PLANETS] = {
         365.0f / 60190.0f   // Neptune
 };
 
-//zPositions
+//zPositions assume AU = 40unit in opengl
 float planetPositions[NUMBER_OF_PLANETS] = {
         0,              //Sun
-        -0.39f * 100,    // Mercury
-        -0.72f * 100,    // Venus
-        -1.00f * 100,    // Earth
-        -1.52f * 100,    // Mars
-        -5.20f * 100,    // Jupiter
-        -9.58f * 100,    // Saturn
-        -19.18f * 100,   // Uranus
-        -30.07f * 100    // Neptune
+        -1.5f  * AU_DISTANCE,    // Mercury
+        -2.0f  * AU_DISTANCE, // Venus
+        -3.0f  * AU_DISTANCE, // Earth
+        -4.0f  * AU_DISTANCE, // Mars
+        -6.0f  * AU_DISTANCE, // Jupiter
+        -10.0f  * AU_DISTANCE, // Saturn
+        -14.0f * AU_DISTANCE,   // Uranus
+        -16.0f * AU_DISTANCE,   // Neptune
 };
 
 struct Color {
@@ -222,9 +223,6 @@ void frameCounter(int value)
     glutTimerFunc(1000, frameCounter, 1);
 }
 
-void initializePlanets(){
-
-}
 
 // Initialization routine.
 void setup(void)
@@ -297,8 +295,16 @@ void drawScene(void)
     if (isCollision) writeBitmapString((void*)font, "Cannot - will crash!");
     glPopMatrix();
 
-    // Fixed camera.
-    gluLookAt(0.0, 10.0, 20.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    // Locate the camera at the tip of the cone and pointing in the direction of the cone.
+    gluLookAt(xVal - 10 * sin((M_PI / 180.0) * angle),
+              0.0,
+              zVal - 10 * cos((M_PI / 180.0) * angle),
+              xVal - 11 * sin((M_PI / 180.0) * angle),
+              0.0,
+              zVal - 11 * cos((M_PI / 180.0) * angle),
+              0.0,
+              1.0,
+              0.0);
 
     // Draw all the asteroids in arrayAsteroids.
    for (i = 0; i<NUMBER_OF_PLANETS; i++)
@@ -323,6 +329,9 @@ void drawScene(void)
     if (isCollision) writeBitmapString((void*)font, "Cannot - will crash!");
     glPopMatrix();
 
+    // Fixed camera.
+    gluLookAt(500.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
     // Draw a vertical line on the left of the viewport to separate the two viewports
     glColor3f(1.0, 1.0, 1.0);
     glLineWidth(2.0);
@@ -332,16 +341,6 @@ void drawScene(void)
     glEnd();
     glLineWidth(1.0);
 
-    // Locate the camera at the tip of the cone and pointing in the direction of the cone.
-    gluLookAt(xVal - 10 * sin((M_PI / 180.0) * angle),
-              0.0,
-              zVal - 10 * cos((M_PI / 180.0) * angle),
-              xVal - 11 * sin((M_PI / 180.0) * angle),
-              0.0,
-              zVal - 11 * cos((M_PI / 180.0) * angle),
-              0.0,
-              1.0,
-              0.0);
 
     for (i = 0; i<NUMBER_OF_PLANETS; i++)
         arrayAsteroids[i].draw();
@@ -356,7 +355,7 @@ void resize(int w, int h)
     glViewport(0, 0, w, h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glFrustum(-5.0, 5.0, -5.0, 5.0, 5.0, 250.0);
+    glFrustum(-5.0, 5.0, -5.0, 5.0, 5.0, 600.0);
     glMatrixMode(GL_MODELVIEW);
 
     // Pass the size of the OpenGL window.
@@ -387,13 +386,13 @@ void specialKeyInput(int key, int x, int y)
     if (key == GLUT_KEY_RIGHT) tempAngle = angle - 5.0;
     if (key == GLUT_KEY_UP)
     {
-        tempxVal = xVal - sin(angle * M_PI / 180.0);
-        tempzVal = zVal - cos(angle * M_PI / 180.0);
+        tempxVal = xVal - sin(angle * M_PI / 180.0) *5;
+        tempzVal = zVal - cos(angle * M_PI / 180.0)*5;
     }
     if (key == GLUT_KEY_DOWN)
     {
-        tempxVal = xVal + sin(angle * M_PI / 180.0);
-        tempzVal = zVal + cos(angle * M_PI / 180.0);
+        tempxVal = xVal + sin(angle * M_PI / 180.0)*5;
+        tempzVal = zVal + cos(angle * M_PI / 180.0)*5;
     }
 
     // Angle correction.
