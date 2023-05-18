@@ -234,7 +234,7 @@ void setup(void)
     glPushMatrix();
     glRotatef(180.0, 0.0, 1.0, 0.0); // To make the spacecraft point down the $z$-axis initially.
     glColor3f(1.0, 1.0, 1.0);
-    glutWireCone(5.0, 10.0, 10, 10);
+    glutSolidCone(5.0, 10.0, 10, 10);
     glPopMatrix();
     glEndList();
 
@@ -284,7 +284,35 @@ void drawScene(void)
     int i;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Beg	in left viewport.
+    //bottom right
+    glViewport(3*width/4 , 0 , width / 4, height/4);
+    glLoadIdentity();
+
+    // Write text in isolated (i.e., before gluLookAt) translate block.
+    glPushMatrix();
+    glColor3f(1.0, 0.0, 0.0);
+    glRasterPos3f(-28.0, 25.0, -30.0);
+    if (isCollision) writeBitmapString((void*)font, "Cannot - will crash!");
+    glPopMatrix();
+
+    // Fixed camera.
+    gluLookAt(0.0, 400.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0,1.0);
+
+
+    // Draw all the asteroids in arrayAsteroids.
+   for (i = 0; i<NUMBER_OF_PLANETS; i++)
+        arrayAsteroids[i].draw();
+
+    // Draw spacecraft.
+    glPushMatrix();
+    glTranslatef(xVal, 0.0, zVal);
+    glRotatef(angle, 0.0, 1.0, 0.0);
+    glCallList(spacecraft);
+    glPopMatrix();
+    // End left viewport.
+
+    // Begin left
+
     glViewport(0, 0, width , height);//demo
     glLoadIdentity();
 
@@ -305,33 +333,6 @@ void drawScene(void)
               0.0,
               1.0,
               0.0);
-
-    // Draw all the asteroids in arrayAsteroids.
-   for (i = 0; i<NUMBER_OF_PLANETS; i++)
-        arrayAsteroids[i].draw();
-
-    // Draw spacecraft.
-    glPushMatrix();
-    glTranslatef(xVal, 0.0, zVal);
-    glRotatef(angle, 0.0, 1.0, 0.0);
-    glCallList(spacecraft);
-    glPopMatrix();
-    // End left viewport.
-
-    // Begin right viewport.
-    glViewport(3*width/4 , height/4 , width / 4, height/4);
-    glLoadIdentity();
-
-    // Write text in isolated (i.e., before gluLookAt) translate block.
-    glPushMatrix();
-    glColor3f(1.0, 0.0, 0.0);
-    glRasterPos3f(-28.0, 25.0, -30.0);
-    if (isCollision) writeBitmapString((void*)font, "Cannot - will crash!");
-    glPopMatrix();
-
-    // Fixed camera.
-    gluLookAt(500.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-
     // Draw a vertical line on the left of the viewport to separate the two viewports
     glColor3f(1.0, 1.0, 1.0);
     glLineWidth(2.0);
