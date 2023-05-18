@@ -1,24 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////
-// spaceTravel.cpp
-//
-// This program draws a conical spacecraft that can travel and an array of
-// fixed spherical asteroids. The view in the left viewport is from a fixed
-// camera; the view in the right viewport is from the spacecraft.
-// There is approximate collision detection.
-//
-// User-defined constants:
-// ROW is the number of rows of  asteroids.
-// COLUMN is the number of columns of asteroids.
-// FILL_PROBABILITY is the percentage probability that a particular row-column slot
-// will be filled with an asteroid.
-//
-// Interaction:
-// Press the left/right arrow keys to turn the craft.
-// Press the up/down arrow keys to move the craft.
-//
-// Sumanta Guha.
-///////////////////////////////////////////////////////////////////////////////////
-
 #define _USE_MATH_DEFINES
 
 #include <cstdlib>
@@ -31,17 +10,115 @@
 #define ROWS 8  // Number of rows of asteroids.
 #define COLUMNS 6 // Number of columns of asteroids.
 #define FILL_PROBABILITY 100 // Percentage probability that a particular row-column slot will be
+#define NUMBER_OF_PLANETS 9  //including sun
+#define EARTH_RADIUS 100
+#define EARTH_SPEED 1
+
 // filled with an asteroid. It should be an integer between 0 and 100.
+enum Planets {
+    Sun,
+    Mercury,
+    Venus,
+    Earth,
+    Mars,
+    Jupiter,
+    Saturn,
+    Uranus,
+    Neptune
+};
 
 // Globals.
 static uintptr_t font = (uintptr_t)GLUT_BITMAP_8_BY_13; // Font selection
 static int width, height; // Size of the OpenGL window.
 static float angle = 0.0; // Angle of the spacecraft.
-static float xVal = 0, zVal = 0; // Co-ordinates of the spacecraft.
+static float xVal = 0, zVal = 1000; // Co-ordinates of the spacecraft.
 static int isCollision = 0; // Is there collision between the spacecraft and an asteroid?
 static unsigned int spacecraft; // Display lists base index.
 static int frameCount = 0; // Number of frames
 
+float planetSize[NUMBER_OF_PLANETS]={
+                EARTH_RADIUS * 109.0,   // Sun
+                EARTH_RADIUS * 0.38,    // Mercury
+                EARTH_RADIUS * 0.95,    // Venus
+                EARTH_RADIUS * 1.0,     // Earth
+                EARTH_RADIUS * 0.53,    // Mars
+                EARTH_RADIUS * 11.2,    // Jupiter
+                EARTH_RADIUS * 9.45,    // Saturn
+                EARTH_RADIUS * 4.0,     // Uranus
+                EARTH_RADIUS * 3.88     // Neptune
+                 };
+
+float orbitalPeriods[NUMBER_OF_PLANETS] = {
+        0,                  //Sun
+        365.0f / 88.0f,     // Mercury
+        365.0f / 225.0f,    // Venus
+        365.0f / 365.0f,    // Earth
+        365.0f / 687.0f,    // Mars
+        365.0f / 4333.0f,   // Jupiter
+        365.0f / 10759.0f,  // Saturn
+        365.0f / 30687.0f,  // Uranus
+        365.0f / 60190.0f   // Neptune
+};
+
+//zPositions
+float planetPositions[NUMBER_OF_PLANETS] = {
+        0,              //Sun
+        -0.39f * 100,    // Mercury
+        -0.72f * 100,    // Venus
+        -1.00f * 100,    // Earth
+        -1.52f * 100,    // Mars
+        -5.20f * 100,    // Jupiter
+        -9.58f * 100,    // Saturn
+        -19.18f * 100,   // Uranus
+        -30.07f * 100    // Neptune
+};
+
+struct Color {
+    float r;
+    float g;
+    float b;
+};
+Color planetColors[] = {
+        {1.0f, 0.9f, 0.0f},    // Sun (Yellow)
+        {0.6f, 0.6f, 0.6f},    // Mercury (Gray)
+        {0.9f, 0.7f, 0.0f},    // Venus (Orange)
+        {0.0f, 0.0f, 1.0f},    // Earth (Blue)
+        {0.7f, 0.2f, 0.0f},    // Mars (Reddish)
+        {0.8f, 0.6f, 0.4f},    // Jupiter (Brownish)
+        {0.9f, 0.8f, 0.6f},    // Saturn (Pale Yellow)
+        {0.7f, 0.9f, 1.0f},    // Uranus (Light Blue)
+        {0.1f, 0.3f, 0.7f}     // Neptune (Dark Blue)
+};
+struct MaterialProp {
+    float ambient[3];
+    float diffuse[3];
+    float shininess;
+};
+MaterialProp materialProp[] = {
+        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Sun
+        {{0.1f, 0.1f, 0.1f}, {0.5f, 0.5f, 0.5f}, 16.0f},   // Mercury
+        {{0.15f, 0.15f, 0.15f}, {0.6f, 0.6f, 0.6f}, 32.0f},   // Venus
+        {{0.2f, 0.2f, 0.2f}, {0.7f, 0.7f, 0.7f}, 64.0f},   // Earth
+        {{0.15f, 0.15f, 0.15f}, {0.6f, 0.6f, 0.6f}, 32.0f},   // Mars
+        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 128.0f},   // Jupiter
+        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 64.0f},   // Saturn
+        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Uranus
+        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f}    // Neptune
+};
+struct MoonProp {
+    float ambient[3];
+    float diffuse[3];
+    float shininess;
+    Color color;
+    float sizeRelativeToEarth;
+};
+MoonProp moonProp = {
+        {0.1f, 0.1f, 0.1f},   // Ambient (Dark gray)
+        {0.6f, 0.6f, 0.6f},   // Diffuse (Light gray)
+        16.0f,                // Shininess
+        {0.7f, 0.7f, 0.7f},   // Color (Gray)
+        EARTH_RADIUS*0.27
+};
 // Routine to draw a bitmap character string.
 void writeBitmapString(void *font, char *string)
 {
@@ -117,6 +194,10 @@ void frameCounter(int value)
     glutTimerFunc(1000, frameCounter, 1);
 }
 
+void initializePlanets(){
+
+}
+
 // Initialization routine.
 void setup(void)
 {
@@ -190,7 +271,7 @@ void drawScene(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Beg	in left viewport.
-    glViewport(0, 0, width / 2.0, height);//demo
+    glViewport(0, 0, width , height);//demo
     glLoadIdentity();
 
     // Write text in isolated (i.e., before gluLookAt) translate block.
@@ -217,7 +298,7 @@ void drawScene(void)
     // End left viewport.
 
     // Begin right viewport.
-    glViewport(width / 2.0, 0, width / 2.0, height);
+    glViewport(3*width/4 , height/4 , width / 4, height/4);
     glLoadIdentity();
 
     // Write text in isolated (i.e., before gluLookAt) translate block.
