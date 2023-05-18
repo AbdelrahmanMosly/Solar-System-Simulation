@@ -11,11 +11,11 @@
 #define COLUMNS 6 // Number of columns of asteroids.
 #define FILL_PROBABILITY 100 // Percentage probability that a particular row-column slot will be
 #define NUMBER_OF_PLANETS 9  //including sun
-#define EARTH_RADIUS 100
+#define EARTH_RADIUS 5
 #define EARTH_SPEED 1
 
 // filled with an asteroid. It should be an integer between 0 and 100.
-enum Planets {
+enum PlanetID {
     Sun,
     Mercury,
     Venus,
@@ -25,6 +25,17 @@ enum Planets {
     Saturn,
     Uranus,
     Neptune
+};
+PlanetID planetIDs[] = {
+        Sun,
+        Mercury,
+        Venus,
+        Earth,
+        Mars,
+        Jupiter,
+        Saturn,
+        Uranus,
+        Neptune
 };
 
 // Globals.
@@ -37,15 +48,15 @@ static unsigned int spacecraft; // Display lists base index.
 static int frameCount = 0; // Number of frames
 
 float planetSize[NUMBER_OF_PLANETS]={
-                EARTH_RADIUS * 109.0,   // Sun
-                EARTH_RADIUS * 0.38,    // Mercury
-                EARTH_RADIUS * 0.95,    // Venus
-                EARTH_RADIUS * 1.0,     // Earth
-                EARTH_RADIUS * 0.53,    // Mars
-                EARTH_RADIUS * 11.2,    // Jupiter
-                EARTH_RADIUS * 9.45,    // Saturn
-                EARTH_RADIUS * 4.0,     // Uranus
-                EARTH_RADIUS * 3.88     // Neptune
+                EARTH_RADIUS,   // Sun
+                EARTH_RADIUS,   // Mercury
+                EARTH_RADIUS,   // Venus
+                EARTH_RADIUS,   // Earth
+                EARTH_RADIUS,   // Mars
+                EARTH_RADIUS,   // Jupiter
+                EARTH_RADIUS,   // Saturn
+                EARTH_RADIUS,   // Uranus
+                EARTH_RADIUS,   // Neptune
                  };
 
 float orbitalPeriods[NUMBER_OF_PLANETS] = {
@@ -127,22 +138,36 @@ void writeBitmapString(void *font, char *string)
     for (c = string; *c != '\0'; c++) glutBitmapCharacter(font, *c);
 }
 
+struct Position{
+    float x;
+    float y;
+    float z;
+};
 // Asteroid class.
 class Asteroid
 {
 public:
     Asteroid();
-    Asteroid(float x, float y, float z, float r, unsigned char colorR,
-             unsigned char colorG, unsigned char colorB);
+    Asteroid(float x, float y, float z, float r, float colorR, float colorG,float colorB,
+             PlanetID planetId);
+
     float getCenterX() { return centerX; }
     float getCenterY() { return centerY; }
     float getCenterZ() { return centerZ; }
+    Position getPosition() {return currentPosition;}
+    void setPosition(Position position) {
+        this->currentPosition.x=position.x;
+        this->currentPosition.y=position.y;
+        this->currentPosition.z=position.z;
+    }
     float getRadius() { return radius; }
     void draw();
 
 private:
+    Position currentPosition;
+    PlanetID planetId;
     float centerX, centerY, centerZ, radius;
-    unsigned char color[3];
+    Color color;
 };
 
 // Asteroid default constructor.
@@ -151,23 +176,26 @@ Asteroid::Asteroid()
     centerX = 0.0;
     centerY = 0.0;
     centerZ = 0.0;
+    currentPosition.x=centerX;
+    currentPosition.y=centerY;
+    currentPosition.z=centerZ;
     radius = 0.0; // Indicates no asteroid exists in the position.
-    color[0] = 0;
-    color[1] = 0;
-    color[2] = 0;
+    this->color={ 0,0,0};
 }
 
 // Asteroid constructor.
-Asteroid::Asteroid(float x, float y, float z, float r, unsigned char colorR,
-                   unsigned char colorG, unsigned char colorB)
+Asteroid::Asteroid(float x, float y, float z, float r, float colorR,
+                   float colorG,float colorB,PlanetID planetId)
 {
+    this->planetId =planetId;
     centerX = x;
     centerY = y;
     centerZ = z;
+    currentPosition.x=x;
+    currentPosition.y=y;
+    currentPosition.z=z;
     radius = r;
-    color[0] = colorR;
-    color[1] = colorG;
-    color[2] = colorB;
+    this->color={ colorR,colorG,colorB};
 }
 
 // Function to draw asteroid.
@@ -177,13 +205,13 @@ void Asteroid::draw()
     {
         glPushMatrix();
         glTranslatef(centerX, centerY, centerZ);
-        glColor3ubv(color);
-        glutWireSphere(radius, (int)radius * 6, (int)radius * 6);
+        glColor3f(color.r,color.g,color.b);
+        glutSolidSphere(radius, (int)radius * 6, (int)radius * 6);
         glPopMatrix();
     }
 }
 
-Asteroid arrayAsteroids[ROWS][COLUMNS]; // Global array of asteroids.
+Asteroid arrayAsteroids[NUMBER_OF_PLANETS]; // Global array of asteroids.
 
 // Routine to count the number of frames drawn every second.
 void frameCounter(int value)
@@ -201,7 +229,7 @@ void initializePlanets(){
 // Initialization routine.
 void setup(void)
 {
-    int i, j;
+    int i;
 
     spacecraft = glGenLists(1);
     glNewList(spacecraft, GL_COMPILE);
@@ -213,21 +241,10 @@ void setup(void)
     glEndList();
 
     // Initialize global arrayAsteroids.
-    for (j = 0; j<COLUMNS; j++)
-        for (i = 0; i<ROWS; i++)
-            if (rand() % 100 < FILL_PROBABILITY)
-                // If rand()%100 >= FILL_PROBABILITY the default constructor asteroid remains in the slot
-                // which indicates that there is no asteroid there because the default's radius is 0.
-            {
-                // Position the asteroids depending on if there is an even or odd number of columns
-                // so that the spacecraft faces the middle of the asteroid field.
-                if (COLUMNS % 2) // Odd number of columns.
-                    arrayAsteroids[i][j] = Asteroid(30.0*(-COLUMNS / 2 + j), 0.0, -40.0 - 30.0*i, 3.0,
-                                                    rand() % 256, rand() % 256, rand() % 256);
-                else // Even number of columns.
-                    arrayAsteroids[i][j] = Asteroid(15 + 30.0*(-COLUMNS / 2 + j), 0.0, -40.0 - 30.0*i, 3.0,
-                                                    rand() % 256, rand() % 256, rand() % 256);
-            }
+    for (i = 0; i<NUMBER_OF_PLANETS; i++)
+        arrayAsteroids[i]=Asteroid(0,0,planetPositions[i],planetSize[i],planetColors[i].r,planetColors[i].g,
+                                   planetColors[i].b,planetIDs[i]);
+
 
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -248,17 +265,16 @@ int checkSpheresIntersection(float x1, float y1, float z1, float r1,
 // Collision detection is approximate as instead of the spacecraft we use a bounding sphere.
 int asteroidCraftCollision(float x, float z, float a)
 {
-    int i, j;
+    int i;
 
     // Check for collision with each asteroid.
-    for (j = 0; j<COLUMNS; j++)
-        for (i = 0; i<ROWS; i++)
-            if (arrayAsteroids[i][j].getRadius() > 0) // If asteroid exists.
-                if (checkSpheresIntersection(x - 5 * sin((M_PI / 180.0) * a), 0.0,
-                                             z - 5 * cos((M_PI / 180.0) * a), 7.072,
-                                             arrayAsteroids[i][j].getCenterX(), arrayAsteroids[i][j].getCenterY(),
-                                             arrayAsteroids[i][j].getCenterZ(), arrayAsteroids[i][j].getRadius()))
-                    return 1;
+    for (i = 0; i<NUMBER_OF_PLANETS; i++)
+        if (arrayAsteroids[i].getRadius() > 0) // If asteroid exists.
+            if (checkSpheresIntersection(x - 5 * sin((M_PI / 180.0) * a), 0.0,
+                                         z - 5 * cos((M_PI / 180.0) * a), 7.072,
+                                         arrayAsteroids[i].getPosition().x, arrayAsteroids[i].getPosition().y,
+                                         arrayAsteroids[i].getPosition().z, arrayAsteroids[i].getRadius()))
+                return 1;
     return 0;
 }
 
@@ -267,7 +283,7 @@ void drawScene(void)
 {
     frameCount++; // Increment number of frames every redraw.
 
-    int i, j;
+    int i;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Beg	in left viewport.
@@ -285,9 +301,8 @@ void drawScene(void)
     gluLookAt(0.0, 10.0, 20.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     // Draw all the asteroids in arrayAsteroids.
-    for (j = 0; j<COLUMNS; j++)
-        for (i = 0; i<ROWS; i++)
-            arrayAsteroids[i][j].draw();
+   for (i = 0; i<NUMBER_OF_PLANETS; i++)
+        arrayAsteroids[i].draw();
 
     // Draw spacecraft.
     glPushMatrix();
@@ -328,10 +343,8 @@ void drawScene(void)
               1.0,
               0.0);
 
-    // Draw all the asteroids in arrayAsteroids.
-    for (j = 0; j<COLUMNS; j++)
-        for (i = 0; i<ROWS; i++)
-            arrayAsteroids[i][j].draw();
+    for (i = 0; i<NUMBER_OF_PLANETS; i++)
+        arrayAsteroids[i].draw();
     // End right viewport.
 
     glutSwapBuffers();
