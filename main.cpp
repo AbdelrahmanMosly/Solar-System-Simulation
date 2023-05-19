@@ -208,6 +208,15 @@ public:
         this->currentPosition.y=position.y;
         this->currentPosition.z=position.z;
     }
+    void setPositionX(float x) {
+        this->currentPosition.x=x;
+    }
+    void setPositionY(float y) {
+        this->currentPosition.y=y;
+    }
+    void setPositionZ(float z) {
+        this->currentPosition.z=z;
+    }
     float getRadius() { return radius; }
     void drawSpecialAsteroid();
     void draw();
@@ -287,10 +296,14 @@ void Asteroid::drawSpecialAsteroid() {
 // Function to draw asteroid.
 void Asteroid::draw()
 {
-    //TODO : handle lights
     if (radius > 0.0) // If asteroid exists.
     {
         glPushMatrix();
+        // Rotate scene.
+        glRotatef(Zangle, 0.0, 0.0, 1.0);
+        glRotatef(Yangle, 0.0, 1.0, 0.0);
+        glRotatef(Xangle, 1.0, 0.0, 0.0);
+
         glColor3f(color.r,color.g,color.b);
 
         glMaterialfv(GL_FRONT, GL_AMBIENT, materialProp[planetId].ambient);
@@ -306,6 +319,7 @@ void Asteroid::draw()
             drawSpecialAsteroid();
 
         glPopMatrix();
+        setPosition({centerZ * (float) sin(angleY * M_PI / 180),centerY, centerZ * (float) cos(angleY * M_PI / 180)});
 
     }
 }
@@ -349,6 +363,8 @@ void setup(void)
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glutTimerFunc(0, frameCounter, 0); // Initial call of frameCounter().
+
+
 }
 
 // Function to check if two spheres centered at (x1,y1,z1) and (x2,y2,z2) with
@@ -377,15 +393,12 @@ int asteroidCraftCollision(float x, float z, float a)
     return 0;
 }
 
-float globAmb[] = {0.9f, 0.9f, 0.9f, 1.0};
 // Drawing routine.
 void drawScene(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     frameCount++; // Increment number of frames every redraw.
     glEnable(GL_LIGHT0);
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globAmb); // Global ambient light.
-    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1); // Enable local viewpoint
     int i;
 
     //begin (Solar system) viewport
@@ -576,7 +589,11 @@ void printInteraction(void)
 {
     std::cout << "Interaction:" << std::endl;
     std::cout << "Press the left/right arrow keys to turn the craft." << std::endl
-              << "Press the up/down arrow keys to move the craft." << std::endl;
+              << "Press the up/down arrow keys to move the craft." << std::endl
+              << "Press space to toggle between animation on and off." << std::endl
+              << "Press the up/down arrow keys to speed up/slow down animation." << std::endl
+              << "Press the x, X, y, Y, z, Z keys to rotate the scene." << std::endl;
+
 }
 
 // Main routine.
