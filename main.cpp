@@ -112,15 +112,15 @@ struct MaterialProp {
 };
 
 MaterialProp materialProp[] = {
-        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Sun
-        {{0.1f, 0.1f, 0.1f}, {0.5f, 0.5f, 0.5f}, 16.0f},   // Mercury
-        {{0.15f, 0.15f, 0.15f}, {0.6f, 0.6f, 0.6f}, 32.0f},   // Venus
-        {{0.2f, 0.2f, 0.2f}, {0.7f, 0.7f, 0.7f}, 64.0f},   // Earth
-        {{0.15f, 0.15f, 0.15f}, {0.6f, 0.6f, 0.6f}, 32.0f},   // Mars
-        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 128.0f},   // Jupiter
-        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 64.0f},   // Saturn
-        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Uranus
-        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f}    // Neptune
+        {{0.2f, 0.2f, 0.2f}, {1.0f, 0.9f, 0.0f},32.0f},   // Sun
+        {{0.1f, 0.1f, 0.1f}, {0.6f, 0.6f, 0.6f},16.0f},   // Mercury
+        {{0.15f, 0.15f, 0.15f},{0.9f, 0.7f, 0.0f},32.0f},  // Venus
+        {{0.2f, 0.2f, 0.2f}, {0.0f, 0.0f, 1.0f},64.0f},   // Earth
+        {{0.15f, 0.15f, 0.15f},{0.7f, 0.2f, 0.0f}, 32.0f},   // Mars
+        {{0.2f, 0.2f, 0.2f}, {0.8f, 0.6f, 0.4f},128.0f},   // Jupiter
+        {{0.2f, 0.2f, 0.2f}, {0.9f, 0.8f, 0.6f},64.0f},   // Saturn
+        {{0.2f, 0.2f, 0.2f}, {0.7f, 0.9f, 1.0f},32.0f},   // Uranus
+        {{0.2f, 0.2f, 0.2f}, {0.1f, 0.3f, 0.7f}, 32.0f}    // Neptune
 };
 
 struct SunLight {
@@ -132,7 +132,7 @@ struct SunLight {
 SunLight sunLight{
          { 0.0f, 0.0f, 0.0f, 1.0f },  // Position of the light source (at the center of the Sun)
          { 0.2f, 0.2f, 0.0f, 1.0f },   // Ambient light color
-         { 1.0f, 1.0f, 0.0f, 1.0f },   // Diffuse light color
+         { 1.0f, 1.0f, 1.0f, 1.0f },   // Diffuse light color
          { 1.0f, 1.0f, 0.0f, 1.0f },  // Specular light color
 
 };
@@ -257,7 +257,7 @@ void Asteroid::drawSpecialAsteroid() {
             glLightfv(GL_LIGHT0, GL_DIFFUSE, sunLight.lightDiffuse);
             glLightfv(GL_LIGHT0, GL_SPECULAR, sunLight.lightSpecular);
             glutSolidSphere(radius, 75, 75);
-            glEnable(GL_LIGHT0);
+            glEnable(GL_LIGHTING);
             break;
         case Earth:
             glColor3f(moonProp.color.r,moonProp.color.g,moonProp.color.b);
@@ -301,6 +301,7 @@ void Asteroid::draw()
         glTranslatef(centerX, centerY, centerZ);
         glRotatef(planetsRotationAngle,0,1.0,0.5);
         glutSolidSphere(radius, (int)radius * 6, (int)radius * 6);
+
         if(planetId==Sun ||planetId ==Saturn || planetId== Earth)
             drawSpecialAsteroid();
 
@@ -324,6 +325,8 @@ void frameCounter(int value)
 // Initialization routine.
 void setup(void)
 {
+    // Turn on OpenGL lighting.
+    glEnable(GL_LIGHTING);
     int i;
 
     spacecraft = glGenLists(1);
@@ -340,19 +343,12 @@ void setup(void)
         arrayAsteroids[i]=Asteroid(0,0,planetPositions[i],planetSize[i],planetColors[i].r,planetColors[i].g,
                                    planetColors[i].b,planetIDs[i]);
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0, 0.0, 0.0, 0.0);
-
     glutTimerFunc(0, frameCounter, 0); // Initial call of frameCounter().
-
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glEnable(GL_DEPTH_TEST); // Enable depth testing.
-
-    // Turn on OpenGL lighting.
-    glEnable(GL_LIGHTING);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
 }
 
 // Function to check if two spheres centered at (x1,y1,z1) and (x2,y2,z2) with
@@ -381,19 +377,23 @@ int asteroidCraftCollision(float x, float z, float a)
     return 0;
 }
 
+float globAmb[] = {0.9f, 0.9f, 0.9f, 1.0};
 // Drawing routine.
 void drawScene(void)
 {
-    frameCount++; // Increment number of frames every redraw.
-    glDisable(GL_LIGHTING);
-
-    int i;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    frameCount++; // Increment number of frames every redraw.
+    glEnable(GL_LIGHT0);
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globAmb); // Global ambient light.
+    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1); // Enable local viewpoint
+    int i;
 
     //begin (Solar system) viewport
     glViewport(3*width/4 , 0 , width / 4, height/4);
     glLoadIdentity();
 
+    glDisable(GL_LIGHTING);
+//    glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0);
     // Write text in isolated (i.e., before gluLookAt) translate block.
     glPushMatrix();
     glColor3f(1.0, 0.0, 0.0);
@@ -405,6 +405,7 @@ void drawScene(void)
     gluLookAt(0.0, 400.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0,1.0);
 
 
+//    glDisable(GL_LIGHTING);
     // Draw all the asteroids in arrayAsteroids.
    for (i = 0; i<NUMBER_OF_PLANETS; i++)
         arrayAsteroids[i].draw();
@@ -421,7 +422,6 @@ void drawScene(void)
 
     glViewport(0, 0, width , height);//demo
     glLoadIdentity();
-    glDisable(GL_LIGHTING);
     // Write text in isolated (i.e., before gluLookAt) translate block.
     glPushMatrix();
     glColor3f(1.0, 0.0, 0.0);
@@ -439,16 +439,8 @@ void drawScene(void)
               0.0,
               1.0,
               0.0);
-    // Draw a vertical line on the left of the viewport to separate the two viewports
-    glColor3f(1.0, 1.0, 1.0);
-    glLineWidth(2.0);
-    glBegin(GL_LINES);
-    glVertex3f(-5.0, -5.0, -5.0);
-    glVertex3f(-5.0, 5.0, -5.0);
-    glEnd();
-    glLineWidth(1.0);
 
-
+    glDisable(GL_LIGHTING);
     for (i = 0; i<NUMBER_OF_PLANETS; i++)
         arrayAsteroids[i].draw();
     // End (Space-craft view) viewport.
