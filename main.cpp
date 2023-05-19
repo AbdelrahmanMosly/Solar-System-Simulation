@@ -43,12 +43,12 @@ PlanetID planetIDs[] = {
 static uintptr_t font = (uintptr_t)GLUT_BITMAP_8_BY_13; // Font selection
 static int width, height; // Size of the OpenGL window.
 static float angle = 0.0; // Angle of the spacecraft.
-static float xVal = 0, zVal = 100; // Co-ordinates of the spacecraft.
+static float xVal = 0, zVal = 300; // Co-ordinates of the spacecraft.
 static int isCollision = 0; // Is there collision between the spacecraft and an asteroid?
 static unsigned int spacecraft; // Display lists base index.
 static int frameCount = 0; // Number of frames
 static float latAngle = 0.0; // Latitudinal angle.
-static float longAngle = 0.0; // Longitudinal angle.
+static float planetsRotationAngle = 0.0; // Longitudinal angle.
 static float Xangle = 0.0, Yangle = 0.0, Zangle = 0.0; // Angles to rotate scene.
 static int isAnimate = 0; // Animated?
 static int animationPeriod = 100; // Time interval between frames.
@@ -121,6 +121,20 @@ MaterialProp materialProp[] = {
         {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Uranus
         {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f}    // Neptune
 };
+struct SunLight {
+    GLfloat lightPosition[4];  // Position of the light source (at the center of the Sun)
+    GLfloat lightAmbient[4]; // Ambient light color
+    GLfloat lightDiffuse[4];   // Diffuse light color
+    GLfloat lightSpecular[4];  // Specular light color
+};
+SunLight sunLight{
+         { 0.0f, 0.0f, 0.0f, 1.0f },  // Position of the light source (at the center of the Sun)
+         { 0.2f, 0.2f, 0.0f, 1.0f },   // Ambient light color
+         { 1.0f, 1.0f, 0.0f, 1.0f },   // Diffuse light color
+         { 1.0f, 1.0f, 0.0f, 1.0f },  // Specular light color
+
+};
+
 struct MoonProp {
     float ambient[3];
     float diffuse[3];
@@ -134,6 +148,31 @@ MoonProp moonProp = {
         16.0f,                // Shininess
         {0.7f, 0.7f, 0.7f},   // Color (Gray)
         EARTH_RADIUS*0.27
+};
+struct SaturnRingsProp {
+    float ambient[3];
+    float diffuse[3];
+    float shininess;
+    Color color;
+};
+SaturnRingsProp saturnRingsProp[] = {
+        {//Light Gray:
+        {0.2f, 0.2f, 0.2f},
+        {0.7f, 0.7f, 0.7f},
+        16.0f,
+        {0.7f, 0.7f, 0.7f},
+},{ //Pale Yellow:
+    {0.2f, 0.2f, 0.0f},
+    {1.0f, 1.0f,  0.8f},
+    16.0f,
+            {1.0f, 1.0f,  0.8f},
+},
+{//Soft Orange:
+    {0.2f, 0.1f, 0.0f},
+    {1.0f, 0.6f,  0.4f},
+    16.0f,
+            {1.0f, 0.6f,  0.4f},
+}
 };
 // Routine to draw a bitmap character string.
 void writeBitmapString(void *font, char *string)
@@ -168,6 +207,7 @@ public:
         this->currentPosition.z=position.z;
     }
     float getRadius() { return radius; }
+    void drawSpecialAsteroid();
     void draw();
 
 private:
@@ -207,29 +247,67 @@ Asteroid::Asteroid(float x, float y, float z, float r, float colorR,
     radius = r;
     this->color={ colorR,colorG,colorB};
 }
+void Asteroid::drawSpecialAsteroid() {
+    switch(planetId){
+        case Sun:
+            glLightfv(GL_LIGHT0, GL_POSITION, sunLight.lightPosition);
+            glLightfv(GL_LIGHT0, GL_AMBIENT, sunLight.lightAmbient);
+            glLightfv(GL_LIGHT0, GL_DIFFUSE, sunLight.lightDiffuse);
+            glLightfv(GL_LIGHT0, GL_SPECULAR, sunLight.lightSpecular);
+            glutSolidSphere(radius, 75, 75);
+//            glEnable(GL_LIGHTING);
+            break;
+        case Earth:
+            glColor3f(moonProp.color.r,moonProp.color.g,moonProp.color.b);
+            glMaterialfv(GL_FRONT, GL_AMBIENT, moonProp.ambient);
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, moonProp.diffuse);
+            glMaterialf(GL_FRONT, GL_SHININESS,moonProp.shininess);
+            glRotatef(planetsRotationAngle,0,1,0.5);
+            glTranslatef(planetSize[Earth]+5,0,0);
+            glutSolidSphere(moonProp.sizeRelativeToEarth, (int)(moonProp.sizeRelativeToEarth *6), (int)(moonProp.sizeRelativeToEarth *6));
+            break;
+        case Saturn:
+            glRotatef(100, 1, 0.0, 0.0);
+            for(int i=0;i<sizeof(saturnRingsProp)/sizeof (saturnRingsProp[0]);i++) {
+                glColor3f(saturnRingsProp[i].color.r, saturnRingsProp[i].color.g, saturnRingsProp[i].color.b);
+                glMaterialfv(GL_FRONT, GL_AMBIENT, saturnRingsProp[i].ambient);
+                glMaterialfv(GL_FRONT, GL_DIFFUSE, saturnRingsProp[i].diffuse);
+                glMaterialf(GL_FRONT, GL_SHININESS, saturnRingsProp[i].shininess);
+                glutSolidTorus(1, planetSize[Saturn] + (5*(i+1))+1.0, 50, 50);
+            }
 
+            break;
+        default:
+            break;
+    }
+
+}
 // Function to draw asteroid.
 void Asteroid::draw()
 {
-    //TODO : distinguish between sun and planet and draw orbit for saturn
     //TODO : handle lights
-    //TODO : handle rotation
     if (radius > 0.0) // If asteroid exists.
     {
 
-
-
         glPushMatrix();
+
+        glColor3f(color.r,color.g,color.b);
+
+        glMaterialfv(GL_FRONT, GL_AMBIENT, materialProp[planetId].ambient);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, materialProp[planetId].diffuse);
+        glMaterialf(GL_FRONT, GL_SHININESS,materialProp[planetId].shininess);
+
         glRotatef(angleY,0,1.0,0);
         glTranslatef(centerX, centerY, centerZ);
-        glColor3f(color.r,color.g,color.b);
-        glRotatef(latAngle,1,0,0);
-        glRotatef(longAngle,0,1.0,0);
+        glRotatef(planetsRotationAngle,0,1.0,0.5);
         glutSolidSphere(radius, (int)radius * 6, (int)radius * 6);
+        if(planetId==Sun ||planetId ==Saturn || planetId== Earth)
+            drawSpecialAsteroid();
+
         glPopMatrix();
-//        setPosition({centerX * (float) cos(angleY * M_PI / 180),
-//                     centerY,
-//                     -1 * centerZ * (float) sin(angleY * M_PI / 180)});
+
+
+
 
     }
 }
@@ -249,6 +327,8 @@ void frameCounter(int value)
 // Initialization routine.
 void setup(void)
 {
+    // Turn on OpenGL lighting.
+//    glEnable(GL_LIGHTING);
     int i;
 
     spacecraft = glGenLists(1);
@@ -270,6 +350,15 @@ void setup(void)
     glClearColor(0.0, 0.0, 0.0, 0.0);
 
     glutTimerFunc(0, frameCounter, 0); // Initial call of frameCounter().
+
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glEnable(GL_DEPTH_TEST); // Enable depth testing.
+
+    // Turn on OpenGL lighting.
+//    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 }
 
 // Function to check if two spheres centered at (x1,y1,z1) and (x2,y2,z2) with
@@ -399,8 +488,8 @@ void animate(int value)
 
         latAngle += 5.0;
     if (latAngle > 360.0) latAngle -= 360.0;
-        longAngle += 1.0;
-        if (longAngle > 360.0) longAngle -= 360.0;
+        planetsRotationAngle += 1.0;
+        if (planetsRotationAngle > 360.0) planetsRotationAngle -= 360.0;
 
         glutPostRedisplay();
         glutTimerFunc(animationPeriod, animate, 1);
