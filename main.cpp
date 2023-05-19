@@ -110,6 +110,7 @@ struct MaterialProp {
     float diffuse[3];
     float shininess;
 };
+
 MaterialProp materialProp[] = {
         {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Sun
         {{0.1f, 0.1f, 0.1f}, {0.5f, 0.5f, 0.5f}, 16.0f},   // Mercury
@@ -121,6 +122,7 @@ MaterialProp materialProp[] = {
         {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f},   // Uranus
         {{0.2f, 0.2f, 0.2f}, {0.8f, 0.8f, 0.8f}, 32.0f}    // Neptune
 };
+
 struct SunLight {
     GLfloat lightPosition[4];  // Position of the light source (at the center of the Sun)
     GLfloat lightAmbient[4]; // Ambient light color
@@ -255,7 +257,7 @@ void Asteroid::drawSpecialAsteroid() {
             glLightfv(GL_LIGHT0, GL_DIFFUSE, sunLight.lightDiffuse);
             glLightfv(GL_LIGHT0, GL_SPECULAR, sunLight.lightSpecular);
             glutSolidSphere(radius, 75, 75);
-//            glEnable(GL_LIGHTING);
+            glEnable(GL_LIGHT0);
             break;
         case Earth:
             glColor3f(moonProp.color.r,moonProp.color.g,moonProp.color.b);
@@ -288,9 +290,7 @@ void Asteroid::draw()
     //TODO : handle lights
     if (radius > 0.0) // If asteroid exists.
     {
-
         glPushMatrix();
-
         glColor3f(color.r,color.g,color.b);
 
         glMaterialfv(GL_FRONT, GL_AMBIENT, materialProp[planetId].ambient);
@@ -305,9 +305,6 @@ void Asteroid::draw()
             drawSpecialAsteroid();
 
         glPopMatrix();
-
-
-
 
     }
 }
@@ -327,8 +324,6 @@ void frameCounter(int value)
 // Initialization routine.
 void setup(void)
 {
-    // Turn on OpenGL lighting.
-//    glEnable(GL_LIGHTING);
     int i;
 
     spacecraft = glGenLists(1);
@@ -355,8 +350,7 @@ void setup(void)
     glEnable(GL_DEPTH_TEST); // Enable depth testing.
 
     // Turn on OpenGL lighting.
-//    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHTING);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 }
@@ -391,6 +385,7 @@ int asteroidCraftCollision(float x, float z, float a)
 void drawScene(void)
 {
     frameCount++; // Increment number of frames every redraw.
+    glDisable(GL_LIGHTING);
 
     int i;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -426,7 +421,7 @@ void drawScene(void)
 
     glViewport(0, 0, width , height);//demo
     glLoadIdentity();
-
+    glDisable(GL_LIGHTING);
     // Write text in isolated (i.e., before gluLookAt) translate block.
     glPushMatrix();
     glColor3f(1.0, 0.0, 0.0);
