@@ -42,8 +42,8 @@ PlanetID planetIDs[] = {
 // Globals.
 static uintptr_t font = (uintptr_t)GLUT_BITMAP_8_BY_13; // Font selection
 static int width, height; // Size of the OpenGL window.
-static float angle = 0.0; // Angle of the spacecraft.
-static float xVal = 0, zVal = 300; // Co-ordinates of the spacecraft.
+static float angle = 90.0; // Angle of the spacecraft.
+static float xVal = 250, zVal = 0; // Co-ordinates of the spacecraft.
 static int isCollision = 0; // Is there collision between the spacecraft and an asteroid?
 static unsigned int spacecraft; // Display lists base index.
 static int frameCount = 0; // Number of frames
