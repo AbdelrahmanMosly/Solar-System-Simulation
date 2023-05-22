@@ -50,7 +50,7 @@ static int frameCount = 0; // Number of frames
 static float latAngle = 0.0; // Latitudinal angle.
 static float planetsRotationAngle = 0.0; // Longitudinal angle.
 static float Xangle = 0.0, Yangle = 0.0, Zangle = 0.0; // Angles to rotate scene.
-static int isAnimate = 0; // Animated?
+static int isAnimate = 1; // Animated?
 static int animationPeriod = 100; // Time interval between frames.
 float planetSize[NUMBER_OF_PLANETS]={
                  5*EARTH_RADIUS,   // Sun
@@ -335,10 +335,32 @@ void frameCounter(int value)
     glutTimerFunc(1000, frameCounter, 1);
 }
 
+// Timer function.
+void animate(int value)
+{
+    if(!isAnimate)
+        return;
+    //change angle for each asteriod respectively
+    for(int i=0;i<NUMBER_OF_PLANETS;i++) {
+        float tempAngle = arrayAsteroids[i].getAngleY() + orbitalPeriods[i];
+        if (tempAngle > 360.0) tempAngle -= 360.0;
+        arrayAsteroids[i].setAngleY(tempAngle);
+    }
 
+    latAngle += 5.0;
+    if (latAngle > 360.0) latAngle -= 360.0;
+    planetsRotationAngle += 1.0;
+    if (planetsRotationAngle > 360.0) planetsRotationAngle -= 360.0;
+
+    glutPostRedisplay();
+    glutTimerFunc(animationPeriod, animate, 1);
+
+}
 // Initialization routine.
 void setup(void)
 {
+    isAnimate = 1;
+    animate(1);
     // Turn on OpenGL lighting.
     glEnable(GL_LIGHTING);
     int i;
@@ -473,27 +495,6 @@ void resize(int w, int h)
     // Pass the size of the OpenGL window.
     width = w;
     height = h;
-}
-// Timer function.
-void animate(int value)
-{
-    if(!isAnimate)
-        return;
-    //change angle for each asteriod respectively
-    for(int i=0;i<NUMBER_OF_PLANETS;i++) {
-        float tempAngle = arrayAsteroids[i].getAngleY() + orbitalPeriods[i];
-        if (tempAngle > 360.0) tempAngle -= 360.0;
-            arrayAsteroids[i].setAngleY(tempAngle);
-    }
-
-        latAngle += 5.0;
-    if (latAngle > 360.0) latAngle -= 360.0;
-        planetsRotationAngle += 1.0;
-        if (planetsRotationAngle > 360.0) planetsRotationAngle -= 360.0;
-
-        glutPostRedisplay();
-        glutTimerFunc(animationPeriod, animate, 1);
-
 }
 // Keyboard input processing routine.
 void keyInput(unsigned char key, int x, int y)
