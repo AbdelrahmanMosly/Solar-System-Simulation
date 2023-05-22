@@ -15,7 +15,7 @@
 #define AU_DISTANCE 20
 #define EARTH_SPEED 1
 
-// filled with an asteroid. It should be an integer between 0 and 100.
+//IDs to distinguish between asteroids
 enum PlanetID {
     Sun,
     Mercury,
@@ -63,17 +63,17 @@ float planetSize[NUMBER_OF_PLANETS]={
                  2*EARTH_RADIUS,   // Uranus
                  2*EARTH_RADIUS,   // Neptune
                  };
-
+//Control speed of rotation
 float orbitalPeriods[NUMBER_OF_PLANETS] = {
-        0.0f,              // Sun
-        4.14773f,            // Mercury
-        1.62222f,          // Venus
-        1.0f,              // Earth
-        0.53258f,          // Mars
-        0.0844152f,      // Jupiter
-        0.0339314f,      // Saturn
-        0.0119189f,      // Uranus
-        0.00606553f      // Neptune
+        0.0f * EARTH_SPEED,              // Sun
+        4.14773f* EARTH_SPEED,          // Mercury
+        1.62222f* EARTH_SPEED,          // Venus
+        1.0f* EARTH_SPEED,             // Earth
+        0.53258f* EARTH_SPEED,         // Mars
+        0.0844152f* EARTH_SPEED,      // Jupiter
+        0.0339314f* EARTH_SPEED,    // Saturn
+        0.0119189f* EARTH_SPEED,      // Uranus
+        0.00606553f  * EARTH_SPEED    // Neptune
 };
 
 //zPositions assume AU = 40unit in opengl
@@ -128,12 +128,14 @@ struct SunLight {
     GLfloat lightAmbient[4]; // Ambient light color
     GLfloat lightDiffuse[4];   // Diffuse light color
     GLfloat lightSpecular[4];  // Specular light color
+    GLfloat lightEmission[4]; // Emission light color
 };
 SunLight sunLight{
          { 0.0f, 0.0f, 0.0f, 1.0f },  // Position of the light source (at the center of the Sun)
          { 0.2f, 0.2f, 0.0f, 1.0f },   // Ambient light color
          { 1.0f, 1.0f, 1.0f, 1.0f },   // Diffuse light color
          { 1.0f, 1.0f, 0.0f, 1.0f },  // Specular light color
+         { 1.0f, 1.0f, 0.0f, 1.0f },  // Emission light color
 
 };
 
@@ -265,7 +267,7 @@ void Asteroid::drawSpecialAsteroid() {
             glLightfv(GL_LIGHT0, GL_AMBIENT, sunLight.lightAmbient);
             glLightfv(GL_LIGHT0, GL_DIFFUSE, sunLight.lightDiffuse);
             glLightfv(GL_LIGHT0, GL_SPECULAR, sunLight.lightSpecular);
-            glutSolidSphere(radius, 75, 75);
+            glLightfv(GL_LIGHT0, GL_EMISSION, sunLight.lightEmission);
             glEnable(GL_LIGHTING);
             break;
         case Earth:
@@ -423,36 +425,6 @@ void drawScene(void)
     glEnable(GL_LIGHT0);
     int i;
 
-    //begin (Solar system) viewport
-    glViewport(3*width/4 , 0 , width / 4, height/4);
-    glLoadIdentity();
-
-    glDisable(GL_LIGHTING);
-//    glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0);
-    // Write text in isolated (i.e., before gluLookAt) translate block.
-    glPushMatrix();
-    glColor3f(1.0, 0.0, 0.0);
-    glRasterPos3f(-28.0, 25.0, -30.0);
-    if (isCollision) writeBitmapString((void*)font, "Cannot - will crash!");
-    glPopMatrix();
-
-    // Fixed camera.
-    gluLookAt(0.0, 400.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0,1.0);
-
-
-//    glDisable(GL_LIGHTING);
-    // Draw all the asteroids in arrayAsteroids.
-   for (i = 0; i<NUMBER_OF_PLANETS; i++)
-        arrayAsteroids[i].draw();
-
-    // Draw spacecraft.
-    glPushMatrix();
-    glTranslatef(xVal, 0.0, zVal);
-    glRotatef(angle, 0.0, 1.0, 0.0);
-    glCallList(spacecraft);
-    glPopMatrix();
-    // End (Solar system) viewport
-
     // Begin (Space-craft view) viewport
 
     glViewport(0, 0, width , height);//demo
@@ -478,7 +450,44 @@ void drawScene(void)
     glDisable(GL_LIGHTING);
     for (i = 0; i<NUMBER_OF_PLANETS; i++)
         arrayAsteroids[i].draw();
+
+    glPushMatrix();
+    glTranslatef(xVal-5, 0.0, zVal+5);
+    glRotatef(angle, 0.0, 1.0, 0.0);
+    glCallList(spacecraft);
+    glPopMatrix();
+    glEnable( GL_SCISSOR_TEST);
+    glScissor(  5*width/8 , 0 , 3*width / 8, 3*height/8);
+    glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+    glDisable( GL_SCISSOR_TEST);
     // End (Space-craft view) viewport.
+
+    //begin (Solar system) viewport
+    glViewport(5*width/8 , 0 ,  3*width / 8, 3*height/8);
+    glLoadIdentity();
+
+    // Write text in isolated (i.e., before gluLookAt) translate block.
+    glPushMatrix();
+    glColor3f(1.0, 0.0, 0.0);
+    glRasterPos3f(-28.0, 25.0, -30.0);
+    if (isCollision) writeBitmapString((void*)font, "Cannot - will crash!");
+    glPopMatrix();
+
+    // Fixed camera.
+    gluLookAt(0.0, 400.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0,1.0);
+
+
+    // Draw all the asteroids in arrayAsteroids.
+    for (i = 0; i<NUMBER_OF_PLANETS; i++)
+        arrayAsteroids[i].draw();
+
+    // Draw spacecraft.
+    glPushMatrix();
+    glTranslatef(xVal, 0.0, zVal);
+    glRotatef(angle, 0.0, 1.0, 0.0);
+    glCallList(spacecraft);
+    glPopMatrix();
+    // End (Solar system) viewport
 
     glutSwapBuffers();
 }
@@ -592,7 +601,6 @@ void printInteraction(void)
     std::cout << "Press the left/right arrow keys to turn the craft." << std::endl
               << "Press the up/down arrow keys to move the craft." << std::endl
               << "Press space to toggle between animation on and off." << std::endl
-              << "Press the up/down arrow keys to speed up/slow down animation." << std::endl
               << "Press the x, X, y, Y, z, Z keys to rotate the scene." << std::endl;
 
 }
